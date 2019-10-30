@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='oscar_views',
-    version=0.21,
+    version=0.22,
     description='library implementing some dedicated OSCAR/Surface views',
     author='Timo Proescholdt',
     author_email='tproescholdt@wmo.int',
