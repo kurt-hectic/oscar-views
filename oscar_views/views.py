@@ -114,9 +114,10 @@ def getMonitoring(region="africa"):
         
     # need to append only those rows not already contained.. the others are joined to existing
 
+    idx_radiosonde = ~df_radiosonde.index.isin( df_synop.index )
+    df_tmp = df_synop.append( df_radiosonde[idx_radiosonde] , sort=False ).join( df_radiosonde[~idx_radiosonde]["Radiosonde"] , rsuffix='_temp', sort=False )
+    
     if has_rs_results:
-        idx_radiosonde = ~df_radiosonde.index.isin( df_synop.index )
-        df_tmp = df_synop.append( df_radiosonde[idx_radiosonde] , sort=False ).join( df_radiosonde[~idx_radiosonde]["Radiosonde"] , rsuffix='_temp', sort=False )
 
         df_tmp.loc[ ~df_tmp["Radiosonde_temp"].isna() , ["Radiosonde"]] =  df_tmp[ ~df_tmp["Radiosonde_temp"].isna()  ]["Radiosonde_temp"]
         df_tmp.drop(columns=['Radiosonde_temp'],inplace=True)
@@ -125,9 +126,10 @@ def getMonitoring(region="africa"):
 
     # need to append only those rows not already contained.. the others are joined to existing
 
+    idx_radiowind = ~df_radiowind.index.isin( df_tmp.index )
+    df_tmp = df_tmp.append( df_radiowind[idx_radiowind] , sort=False ).join( df_radiowind[~idx_radiowind]["Radiowind"] , rsuffix='_temp', sort=False )
+    
     if has_rw_results:
-        idx_radiowind = ~df_radiowind.index.isin( df_tmp.index )
-        df_tmp = df_tmp.append( df_radiowind[idx_radiowind] , sort=False ).join( df_radiowind[~idx_radiowind]["Radiowind"] , rsuffix='_temp', sort=False )
 
         df_tmp.loc[ ~df_tmp["Radiowind_temp"].isna() , ["Radiowind"]] =  df_tmp[ ~df_tmp["Radiowind_temp"].isna()  ]["Radiowind_temp"]
         df_tmp.drop(columns=['Radiowind_temp'],inplace=True)
