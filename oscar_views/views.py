@@ -4,10 +4,15 @@ import math
 import pycountry
 import re
 import logging
+import json
 from io import StringIO
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 logger = logging.getLogger()
+
+
+country_map = json.loads('{"Algeria": "DZA", "Angola": "AGO", "Benin": "BEN", "Botswana": "BWA", "Burkina Faso": "BFA", "Burundi": "BDI", "Cabo Verde": "CPV", "Cameroon": "CMR", "Central African Republic": "CAF", "Chad": "TCD", "Comoros": "COM", "Congo": "COG", "Congo, Democratic Republic of the": "COD", "C\\u00f4te d\'Ivoire": "CIV", "Djibouti": "DJI", "Egypt": "EGY", "Equatorial Guinea": "GNQ", "Eritrea": "ERI", "Eswatini": "SWZ", "Ethiopia": "ETH", "France": "FRA", "Gabon": "GAB", "Gambia": "GMB", "Ghana": "GHA", "Guinea": "GIN", "Guinea-Bissau": "GNB", "Kenya": "KEN", "Lesotho": "LSO", "Liberia": "LBR", "Libya": "LBY", "Madagascar": "MDG", "Malawi": "MWI", "Mali": "MLI", "Mauritania": "MRT", "Mauritius": "MUS", "Morocco": "MAR", "Mozambique": "MOZ", "Namibia": "NAM", "Niger": "NGA", "Nigeria": "NGA", "Norway": "NOR", "Portugal": "PRT", "Rwanda": "RWA", "Saint Helena": "SHN", "Sao Tome and Principe": "STP", "Senegal": "SEN", "Seychelles": "SYC", "Sierra Leone": "SLE", "Somalia": "SOM", "South Africa": "ZAF", "South Sudan": "SSD", "Spain": "ESP", "Sudan": "SDN", "Tanzania, United Republic of": "TZA", "Togo": "TGO", "Tunisia": "TUN", "Uganda": "UGA", "United Kingdom (the)": "GBR", "Zambia": "ZMB", "Zimbabwe": "ZWE", "Afghanistan": "AFG", "Bahrain": "BHR", "Bangladesh": "BGD", "Cambodia": "KHM", "China": "CHN", "Hong Kong, China": "HKG", "India": "IND", "Iran, Islamic Republic of": "IRN", "Iraq": "IRQ", "Japan": "JPN", "Korea, Democratic People\'s Republic of": "PRK", "Korea, Republic of": "KOR", "Kuwait": "KWT", "Kyrgyzstan": "KGZ", "Lao People\'s Democratic Republic": "LAO", "Macao, China": "MAC", "Maldives": "MDV", "Mongolia": "MNG", "Myanmar": "MMR", "Nepal": "NPL", "Oman": "OMN", "Pakistan": "PAK", "Qatar": "QAT", "Russian Federation": "RUS", "Saudi Arabia": "SAU", "Sri Lanka": "LKA", "Tajikistan": "TJK", "Thailand": "THA", "Turkmenistan": "TKM", "United Arab Emirates (the)": "ARE", "Uzbekistan": "UZB", "Viet Nam": "VNM", "Yemen": "YEM", "Armenia": "ARM", "Austria": "AUT", "Azerbaijan": "AZE", "Belarus": "BLR", "Belgium": "BEL", "Bosnia and Herzegovina": "BIH", "Bulgaria": "BGR", "Croatia": "HRV", "Cyprus": "CYP", "Czech Republic": "CZE", "Denmark": "DNK", "Estonia": "EST", "Finland": "FIN", "Georgia": "GEO", "Germany": "DEU", "Gibraltar": "GIB", "Greece": "GRC", "Greenland": "GRL", "Hungary": "HUN", "Iceland": "ISL", "Ireland": "IRL", "Israel": "ISR", "Italy": "ITA", "Jordan": "JOR", "Latvia": "LVA", "Lebanon": "LBN", "Lithuania": "LTU", "Luxembourg": "LUX", "Malta": "MLT", "Moldova, Republic of": "MDA", "Montenegro": "MNE", "Netherlands": "NLD", "North Macedonia, Republic of": "MKD", "Poland": "POL", "Romania": "ROU", "Serbia": "SRB", "Slovakia": "SVK", "Slovenia": "SVN", "Sweden": "SWE", "Switzerland": "CHE", "Syrian Arab Republic": "SYR", "Turkey": "TUR", "Ukraine": "UKR", "Antigua and Barbuda": "ATG", "Bahamas": "BHS", "Barbados": "BRB", "Belize": "BLZ", "Canada": "CAN", "Cayman Islands": "CYM", "Colombia": "COL", "Costa Rica": "CRI", "Cuba": "CUB", "Curacao": "NLD", "Dominica": "DMA", "Dominican Republic": "DOM", "El Salvador": "SLV", "Grenada": "GRD", "Guatemala": "GTM", "Haiti": "HTI", "Honduras": "HND", "Jamaica": "JAM", "Mexico": "MEX", "Nicaragua": "NIC", "Panama": "PAN", "Puerto Rico": "PRI", "Saint Lucia": "LCA", "Saint Pierre and Miquelon": "SPM", "Sint Maarten": "NLD", "Trinidad and Tobago": "TTO", "United States (the)": "USA", "Venezuela, Bolivarian Republic of": "VEN", "Argentina": "ARG", "Bolivia, Plurinational State of": "BOL", "Brazil": "BRA", "Chile": "CHL", "Ecuador": "ECU", "Falkland Islands (Malvinas)": "FLK", "Guyana": "GUY", "Paraguay": "PRY", "Peru": "PER", "Suriname": "SUR", "Uruguay": "URY", "Australia": "AUS", "Brunei Darussalam": "BRN", "Christmas Island": "CXR", "Cocos (Keeling) Islands": "CCK", "Cook Islands": "COK", "Fiji": "FJI", "French Polynesia": "PYF", "Indonesia": "IDN", "Kiribati": "KIR", "Malaysia": "MYS", "Marshall Islands": "MHL", "Micronesia, Federated States of": "FSM", "Nauru": "NRU", "New Caledonia": "NCL", "New Zealand": "NZL", "Niue": "NIU", "Palau": "PLW", "Papua New Guinea": "PNG", "Philippines": "PHL", "Pitcairn": "PCN", "Samoa": "WSM", "Singapore": "SGP", "Solomon Islands": "SLB", "Timor-Leste": "TLS", "Tokelau": "TKL", "Tonga": "TON", "Tuvalu": "TUV", "Vanuatu": "VUT", "Kazakhstan": "KAZ"}')
+
 
 
 def extractPrimaryWIGOSid(json):
@@ -106,13 +111,13 @@ def getMonitoring(region="africa"):
         df_radiowind.drop(columns= set(df_radiowind.columns).intersection(set(mycolumns))   ,inplace=True)
         df_radiowind = df_radiowind[ df_radiowind.stationStatusCode == 'operational' ]
 
-    logger.debug("joinging dataframes")
+    logger.debug("joining dataframes")
         
     # need to append only those rows not already contained.. the others are joined to existing
 
     if has_rs_results:
         idx_radiosonde = ~df_radiosonde.index.isin( df_synop.index )
-        df_tmp = df_synop.append( df_radiosonde[idx_radiosonde] ).join( df_radiosonde[~idx_radiosonde]["Radiosonde"] , rsuffix='_temp', sort=False )
+        df_tmp = df_synop.append( df_radiosonde[idx_radiosonde] , sort=False ).join( df_radiosonde[~idx_radiosonde]["Radiosonde"] , rsuffix='_temp', sort=False )
 
         df_tmp.loc[ ~df_tmp["Radiosonde_temp"].isna() , ["Radiosonde"]] =  df_tmp[ ~df_tmp["Radiosonde_temp"].isna()  ]["Radiosonde_temp"]
         df_tmp.drop(columns=['Radiosonde_temp'],inplace=True)
@@ -123,7 +128,7 @@ def getMonitoring(region="africa"):
 
     if has_rw_results:
         idx_radiowind = ~df_radiowind.index.isin( df_tmp.index )
-        df_tmp = df_tmp.append( df_radiowind[idx_radiowind] ).join( df_radiowind[~idx_radiowind]["Radiowind"] , rsuffix='_temp', sort=False )
+        df_tmp = df_tmp.append( df_radiowind[idx_radiowind] , sort=False ).join( df_radiowind[~idx_radiowind]["Radiowind"] , rsuffix='_temp', sort=False )
 
         df_tmp.loc[ ~df_tmp["Radiowind_temp"].isna() , ["Radiowind"]] =  df_tmp[ ~df_tmp["Radiowind_temp"].isna()  ]["Radiowind_temp"]
         df_tmp.drop(columns=['Radiowind_temp'],inplace=True)
@@ -157,29 +162,11 @@ def getMonitoring(region="africa"):
 
     order = ["RegionID","RegionName","Country/Area (VOLA)","Country(operator)","Code/GLO","FixedShip","StationName","Surface","Radiosonde","Radiowind","Latitude","Longitude"]
 
-
-    country_map = {}
-    for c in df_tmp["Country(operator)"].unique():
-        try:
-            t=pycountry.countries.search_fuzzy(c)
-            t=t[0]
-            country_map[c]=t.alpha_3
-            #print("{} to {}".format(c,t))
-        except Exception:
-            pass
-            
-    country_map["North Macedonia, Republic of"] = "MKD"
-    country_map["United States (the)"] = "USA"
-    country_map["Congo, Democratic Republic of the"] = "COD"
-    country_map["United Kingdom (the)"] = "GBR"
-    country_map["Macao, China"] = "MAC"
-    country_map["United Arab Emirates (the)"] = "ARE"
-
     df_tmp["Code/GLO"]=df_tmp["Code/GLO"].map(country_map)
     
     csv_buffer = StringIO()
     
-    df_tmp[order].to_csv(csv_buffer)
+    df_tmp[order].to_csv(csv_buffer ,  index = region == "africa" ) # only print header for first chunk
     
     
-    return csv_buffer
+    return csv_buffer.getvalue()
