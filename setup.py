@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 import oscar_views
 
 setup(
-    name='oscar-views',
+    name='oscar_views',
     version=oscar_views.__version__ ,
     description='library implementing some dedicated OSCAR/Surface views',
     author='Timo Proescholdt',
@@ -14,6 +14,8 @@ setup(
     install_requires=[
         'setuptools',
         'requests',
+        'pandas',
+        'pycountry'
       ],
     
     )
