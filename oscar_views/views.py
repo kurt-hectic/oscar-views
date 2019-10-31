@@ -22,29 +22,6 @@ def extractPrimaryWIGOSid(json):
                 continue 
     return json
 
-def resolveCountryName(countryname):
-    
-    m = re.search("(.*),(.*)",countryname)
-    if m:
-        countryname = "{} ({})".format(m.group(1).strip(),m.group(2).strip())
-        
-    countryname = countryname.replace('(the)','').strip()
-        
-    r2 = requests.get("https://restcountries.eu/rest/v2/name/{}?fields=alpha3Code".format(countryname))
-    if r2.status_code != requests.codes.ok:
-        problem=True
-        if m:
-            countryname=m.group(1).strip()
-            r2 = requests.get("https://restcountries.eu/rest/v2/name/{}?fields=alpha3Code".format(countryname))
-            if r2.status_code == requests.codes.ok:
-                problem=False
-
-        if problem:
-            print("problem mapping '{}'".format(countryname))
-            return False
-
-    return r2.json()[0]["alpha3Code"]
-
 def deg_min_sec(degrees = 0.0, latitude=True):
     if type(degrees) != 'float':
         try:
@@ -91,13 +68,13 @@ def mergeDFs(df_one,df_two,column,val):
                 
         return df_result  
         
-def getMonitoring(countrycode="DZA",writeHeader=True):
+def getMonitoring(region="africa",writeHeader=True):
       
     logger.debug("downloading data for {}".format(countrycode))
 
-    synop_stations = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=synopLand,synopSea&territoryName={}".format(countrycode))
-    radiosonde_station = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=upperAirRadiosonde&territoryName={}".format(countrycode))
-    radiosonde_pilot_stations = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=upperAirPilot&territoryName={}".format(countrycode))
+    synop_stations = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=synopLand,synopSea&wmoRegion={}".format(region))
+    radiosonde_station = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=upperAirRadiosonde&wmoRegion={}".format(region))
+    radiosonde_pilot_stations = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=upperAirPilot&wmoRegion={}".format(region))
 
     logger.debug("constructing dataframes")
     
