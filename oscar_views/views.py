@@ -70,7 +70,7 @@ def mergeDFs(df_one,df_two,column,val):
         
 def getMonitoring(region="africa",writeHeader=True):
       
-    logger.debug("downloading data for {}".format(countrycode))
+    logger.debug("downloading data for {}".format(region))
 
     synop_stations = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=synopLand,synopSea&wmoRegion={}".format(region))
     radiosonde_station = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=upperAirRadiosonde&wmoRegion={}".format(region))
