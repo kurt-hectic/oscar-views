@@ -79,7 +79,7 @@ def getMonitoring(region="africa",writeHeader=True):
 
     logger.debug("constructing dataframes")
     
-    mycols = ['primary_WIGOS_id', 'name', 'region', 'territory', 'latitude',  'longitude', 'Surface','Radiosonde','Radiowind','FixedShip'] 
+    mycols = ['primary_WIGOS_id', 'name', 'region', 'territory', 'latitude',  'longitude', 'Surface','Radiosonde','Radiowind','Anton','FixedShip'] 
 
     df_result = pd.DataFrame(  columns= mycols ).set_index('primary_WIGOS_id')
     
@@ -121,7 +121,7 @@ def getMonitoring(region="africa",writeHeader=True):
     col_map = { "name" : "StationName" , "region" : "RegionName" , "territory" : "Country(operator)" ,"latitude":"Latitude","longitude":"Longitude" }
     df_result.rename(columns=col_map,inplace=True)
 
-    order = ["RegionID","RegionName","Country/Area (VOLA)","Country(operator)","Code/GLO","FixedShip","StationName","Surface","Radiosonde","Radiowind","Latitude","Longitude"]
+    order = ["RegionID","RegionName","Country/Area (VOLA)","Country(operator)","Code/GLO","FixedShip","StationName","Surface","Radiosonde","Radiowind","Anton","Latitude","Longitude"]
     
     csv_buffer = StringIO()
     df_result[order].to_csv(csv_buffer, header = writeHeader ) # only print header for first chunk
