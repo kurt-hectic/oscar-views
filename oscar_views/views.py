@@ -75,6 +75,7 @@ def getMonitoring(region="africa",writeHeader=True):
     synop_stations = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=synopLand,synopSea&wmoRegion={}".format(region))
     radiosonde_station = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=upperAirRadiosonde&wmoRegion={}".format(region))
     radiosonde_pilot_stations = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=upperAirPilot&wmoRegion={}".format(region))
+    anton_stations = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?programAffiliation=ANTON,ANTONt&wmoRegion={}".format(region))
 
     logger.debug("constructing dataframes")
     
@@ -94,6 +95,9 @@ def getMonitoring(region="africa",writeHeader=True):
     df_radiowind = pd.DataFrame( extractPrimaryWIGOSid( radiosonde_pilot_stations.json() ) )
     df_result = mergeDFs(df_result,df_radiowind,"Radiowind","W")
     
+    df_anton = pd.DataFrame( extractPrimaryWIGOSid( anton_stations.json() ) )
+    df_result = mergeDFs(df_result,df_anton,"Anton","A")
+        
     logger.debug("data processing")
 
     df_result["latitude"] = df_result.latitude.apply(lambda x :  deg_min_sec(x) )
