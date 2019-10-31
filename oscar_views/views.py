@@ -68,106 +68,81 @@ def deg_min_sec(degrees = 0.0, latitude=True):
     else:
         return "{:03d} {:02d}{}".format( abs(degrees), minutes, prefix)
         
-        
-        
-def getMonitoring(region="africa"):
-      
-    logger.debug("downloading data")
+  
+def mergeDFs(df_one,df_two,column,val):
 
-    synop_stations = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=synopLand,synopSea&wmoRegion={}".format(region))
-    radiosonde_station = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=upperAirRadiosonde&wmoRegion={}".format(region))
-    radiosonde_pilot_stations = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=upperAirPilot&wmoRegion={}".format(region))
+        logger.debug("enter mergeDF for {}  . lena: {} lenb: {}".format(val,len(df_one),len(df_two)))
+
+        if len(df_two) == 0:
+            return df_one
+            
+        df_two.set_index('primary_WIGOS_id',inplace=True)
+        df_two = df_two[ df_two.stationStatusCode == 'operational' ]
+
+        remove_columns = set(df_two.columns) - set(df_one.columns)
+        df_two.drop(columns=remove_columns,inplace=True)
+        df_two.loc[:,column] = val # set the flag 
+        
+        idx_present = df_two.index.isin( df_one.index ) # the rows that are already contained in the first dataframe
+        df_result = df_one.append( df_two[~idx_present] , sort=False ) # append results that are not already contained in the first
+        df_result.loc[ df_result.index.isin( df_two[idx_present].index )  ,column] = val # set flag for rows that are already contained in the result        
+        
+        logger.debug("exit mergeDF for {}".format(val))
+                
+        return df_result  
+        
+def getMonitoring(countrycode="DZA",writeHeader=True):
+      
+    logger.debug("downloading data for {}".format(countrycode))
+
+    synop_stations = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=synopLand,synopSea&territoryName={}".format(countrycode))
+    radiosonde_station = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=upperAirRadiosonde&territoryName={}".format(countrycode))
+    radiosonde_pilot_stations = requests.get("https://oscar.wmo.int/surface/rest/api/search/station?stationClass=upperAirPilot&territoryName={}".format(countrycode))
 
     logger.debug("constructing dataframes")
     
-    #mycolumns = ['wigosStationIdentifiers','id','declaredStatus','elevation','stationTypeId','dateEstablished','dateClosed'] 
-    mycolumns = ['wigosStationIdentifiers','id','declaredStatus','elevation','stationTypeId','dateEstablished'] 
+    mycols = ['primary_WIGOS_id', 'name', 'region', 'territory', 'latitude',  'longitude', 'Surface','Radiosonde','Radiowind','FixedShip'] 
+
+    df_result = pd.DataFrame(  columns= mycols ).set_index('primary_WIGOS_id')
     
     df_synop =  pd.DataFrame( extractPrimaryWIGOSid( synop_stations.json() ) )
+    if len(df_synop)>0:
+        df_synop=df_synop[ df_synop.stationProgramsDeclaredStatuses.str.contains("RBSN",na=False)  ] 
 
-    df_synop["Surface"] = "S"
-    df_synop.drop(columns=mycolumns,inplace=True)
+    df_result = mergeDFs(df_result,df_synop,"Surface","S")
 
-    df_synop=df_synop[ (df_synop.stationProgramsDeclaredStatuses.str.contains("RBSN",na=False)) & ( df_synop.stationStatusCode == 'operational' ) ] 
-    df_synop.set_index('primary_WIGOS_id',inplace=True)
-    
     df_radiosonde = pd.DataFrame( extractPrimaryWIGOSid( radiosonde_station.json() ) )
-    has_rs_results = len(df_radiosonde) > 0
-    
-    if has_rs_results:
-        df_radiosonde["Radiosonde"] = "R"
-        df_radiosonde.set_index('primary_WIGOS_id',inplace=True)
-        df_radiosonde.drop(columns=mycolumns,inplace=True)
-        df_radiosonde = df_radiosonde[ df_radiosonde.stationStatusCode == 'operational' ]
-
+    df_result = mergeDFs(df_result,df_radiosonde,"Radiosonde","R")
 
     df_radiowind = pd.DataFrame( extractPrimaryWIGOSid( radiosonde_pilot_stations.json() ) )
-    has_rw_results = len(df_radiowind) > 0
+    df_result = mergeDFs(df_result,df_radiowind,"Radiowind","W")
     
-    if has_rw_results :
-        df_radiowind["Radiowind"] = "W"
-        df_radiowind.set_index('primary_WIGOS_id',inplace=True)
-        df_radiowind.drop(columns= set(df_radiowind.columns).intersection(set(mycolumns))   ,inplace=True)
-        df_radiowind = df_radiowind[ df_radiowind.stationStatusCode == 'operational' ]
-
-    logger.debug("joining dataframes")
-        
-    # need to append only those rows not already contained.. the others are joined to existing
-
-    idx_radiosonde = ~df_radiosonde.index.isin( df_synop.index )
-    df_tmp = df_synop.append( df_radiosonde[idx_radiosonde] , sort=False ).join( df_radiosonde[~idx_radiosonde]["Radiosonde"] , rsuffix='_temp', sort=False )
-    
-    if has_rs_results:
-
-        df_tmp.loc[ ~df_tmp["Radiosonde_temp"].isna() , ["Radiosonde"]] =  df_tmp[ ~df_tmp["Radiosonde_temp"].isna()  ]["Radiosonde_temp"]
-        df_tmp.drop(columns=['Radiosonde_temp'],inplace=True)
-    else:
-        df_tmp["Radiosonde"] = ""
-
-    # need to append only those rows not already contained.. the others are joined to existing
-
-    idx_radiowind = ~df_radiowind.index.isin( df_tmp.index )
-    df_tmp = df_tmp.append( df_radiowind[idx_radiowind] , sort=False ).join( df_radiowind[~idx_radiowind]["Radiowind"] , rsuffix='_temp', sort=False )
-    
-    if has_rw_results:
-
-        df_tmp.loc[ ~df_tmp["Radiowind_temp"].isna() , ["Radiowind"]] =  df_tmp[ ~df_tmp["Radiowind_temp"].isna()  ]["Radiowind_temp"]
-        df_tmp.drop(columns=['Radiowind_temp'],inplace=True)
-    else:
-        df_tmp["Radiowind"] = ""
-
     logger.debug("data processing")
 
-    df_tmp["latitude"] = df_tmp.latitude.apply(lambda x :  deg_min_sec(x) )
-    df_tmp["longitude"] = df_tmp.longitude.apply(lambda x :  deg_min_sec(x,False) )
-    df_tmp = df_tmp.fillna("")
+    df_result["latitude"] = df_result.latitude.apply(lambda x :  deg_min_sec(x) )
+    df_result["longitude"] = df_result.longitude.apply(lambda x :  deg_min_sec(x,False) )
+    df_result = df_result.fillna("")
     
     region_map = {'Africa':"I", "North America, Central America and the Caribbean": "IV" , "Europe": "VI", "South America": "III", "South-West Pacific" : "V" , "Asia" : "II" , "Antarctica" : "VII"  }
     
-    df_tmp["RegionID"] = df_tmp.region.map(region_map)
+    df_result["RegionID"] = df_result.region.map(region_map)
     
     # only stations with 20001 or 20000 WIGOS ID 2nd block, as we can only extract WMO Indexes and Subindexes from them
-    df_tmp=df_tmp[ (df_tmp.index.str.contains("-20000-",na=False)) | (df_tmp.index.str.contains("-20001-",na=False))  ]
+    df_result=df_result[ (df_result.index.str.contains("-20000-",na=False)) | (df_result.index.str.contains("-20001-",na=False))  ]
 
-    df_tmp["Index"] = df_tmp.reset_index().primary_WIGOS_id.str.split('-',expand=True).loc[:,3].values
-    df_tmp["IndexSubNr"] = df_tmp.reset_index().primary_WIGOS_id.str.split('-',expand=True).loc[:,1].str.slice(-1).values
+    df_result["Index"] = df_result.reset_index().primary_WIGOS_id.str.split('-',expand=True).loc[:,3].values
+    df_result["IndexSubNr"] = df_result.reset_index().primary_WIGOS_id.str.split('-',expand=True).loc[:,1].str.slice(-1).values
     
-    df_tmp["Country/Area (VOLA)"] = df_tmp.territory
-    df_tmp["Code/GLO"] = df_tmp.territory
-    df_tmp["FixedShip"] = ""
-
+    df_result["Country/Area (VOLA)"] = df_result.territory
+    df_result["Code/GLO"] = df_result.territory
+    df_result["Code/GLO"]=df_result["Code/GLO"].map(country_map)
+    
     col_map = { "name" : "StationName" , "region" : "RegionName" , "territory" : "Country(operator)" ,"latitude":"Latitude","longitude":"Longitude" }
-
-    df_tmp.rename(columns=col_map,inplace=True)
-
+    df_result.rename(columns=col_map,inplace=True)
 
     order = ["RegionID","RegionName","Country/Area (VOLA)","Country(operator)","Code/GLO","FixedShip","StationName","Surface","Radiosonde","Radiowind","Latitude","Longitude"]
-
-    df_tmp["Code/GLO"]=df_tmp["Code/GLO"].map(country_map)
     
     csv_buffer = StringIO()
-    
-    df_tmp[order].to_csv(csv_buffer ,  index = region == "africa" ) # only print header for first chunk
-    
+    df_result[order].to_csv(csv_buffer, header = writeHeader ) # only print header for first chunk
     
     return csv_buffer.getvalue()
